@@ -1,5 +1,5 @@
 
-public class Edge {
+/*public class Edge {
   Pixel from;
   Pixel to;
   public Edge(Pixel from, Pixel to) {
@@ -13,3 +13,4 @@ public class Edge {
   }
   
 }
+*/

@@ -51,15 +51,13 @@ public class SeamCarver extends World {
             if (col + c < width && col + c >= 0
                 && row + r < height && row + r >= 0) {
               if (!(c == 0 && r == 0)) {
-                this.bitmap.get(col).get(row).addEdge(
-                    new Edge(this.bitmap.get(col).get(row),
-                        this.bitmap.get(col + c).get(row + r)));
+                this.bitmap.get(col).get(row).neighbors[r+1][c+1] =
+                        this.bitmap.get(col + c).get(row + r);
               }
             }
             else {
-              this.bitmap.get(col).get(row).addEdge(
-                  new Edge(this.bitmap.get(col).get(row),
-                      new Pixel(col + c, row + r, Color.BLACK)));
+              this.bitmap.get(col).get(row).neighbors[r+1][c+1] =
+                      new Pixel(col + c, row + r, Color.BLACK);
             }
           }
         }
@@ -72,9 +70,10 @@ public class SeamCarver extends World {
   @Override
   public WorldScene makeScene() {
     WorldScene base = new WorldScene((int) this.img.getWidth(), (int) this.img.getHeight());
-    base.placeImageXY(img, (int) this.img.getWidth() / 2, (int) this.img.getHeight() / 2);
-    //base.placeImageXY(drawSeam(), (int) this.img.getWidth() / 2, (int) this.img.getHeight() / 2);
-    base.placeImageXY(drawEnergyMap(), (int) this.img.getWidth() / 2, (int) this.img.getHeight() / 2);
+    //base.placeImageXY(img, (int) this.img.getWidth() / 2, (int) this.img.getHeight() / 2);
+    base.placeImageXY(drawSeam(), (int) this.img.getWidth() / 2, (int) this.img.getHeight() / 2);
+    //base.placeImageXY(drawFromBitMap(), (int) this.img.getWidth() / 2, (int) this.img.getHeight() / 2);
+    //base.placeImageXY(drawEnergyMap(), (int) this.img.getWidth() / 2, (int) this.img.getHeight() / 2);
     return base;
   }
   
@@ -100,10 +99,11 @@ public class SeamCarver extends World {
   
   WorldImage drawSeam() {
     SeamInfo seam = this.findSeamVertical();
+   
     ComputedPixelImage base = new ComputedPixelImage(this.bitmap.size(), this.bitmap.get(0).size());
     for (int c = 0; c < this.bitmap.size(); c++) {
       for (int r = 0; r < this.bitmap.get(0).size(); r++) {
-        base.setPixel(c, r, this.img.getColorAt(c, r));
+        base.setPixel(c, r, this.bitmap.get(c).get(r).color);
       }
     }
     
@@ -112,11 +112,22 @@ public class SeamCarver extends World {
     }
     
     
+    
+    
     return base;
     
   }
+  WorldImage drawFromBitMap() {
+    ComputedPixelImage base = new ComputedPixelImage(this.bitmap.size(), this.bitmap.get(0).size());
+    for (int c = 0; c < this.bitmap.size(); c++) {
+      for (int r = 0; r < this.bitmap.get(0).size(); r++) {
+        base.setPixel(c, r, this.bitmap.get(c).get(r).color);
+      }
+    }
+    return base;
+  }
   
-  private SeamInfo findSeamVertical() {
+  SeamInfo findSeamVertical() {
     ArrayList<ArrayList<SeamInfo>> seamMap = getSeamMap();
     SeamInfo best = seamMap.get(0).get(seamMap.get(0).size()-1);
     for(int c = 0; c < seamMap.size(); c++) {
@@ -127,6 +138,13 @@ public class SeamCarver extends World {
     
     
     return best;    
+  }
+  
+  @Override
+  public void onKeyEvent(String ke) {
+    SeamInfo bestSeam = findSeamVertical();
+    this.removeSeam(bestSeam);
+  
   }
 
   //returns the seam map
@@ -156,8 +174,51 @@ public class SeamCarver extends World {
   
   void removeSeam(SeamInfo seam) {
     for(SeamInfo s: seam) {
-      s.correspondant.findPixel(-1, 0).removeEdge(1, 0);
-      s.correspondant.findPixel(-1, 0).addEdge();
+      s.correspondant.neighbors[1][0].neighbors[1][2] = s.correspondant.neighbors[1][2];
+      s.correspondant.neighbors[1][2].neighbors[1][0] = s.correspondant.neighbors[1][0];
+      
+      if(s.cameFrom != null) {
+        if(s.cameFrom.correspondant.col < s.correspondant.col) { //if going diagonal to the left
+          //top and bottom
+          s.correspondant.neighbors[0][1].neighbors[2][1] = s.correspondant.neighbors[1][0];
+          s.correspondant.neighbors[1][0].neighbors[0][1] = s.correspondant.neighbors[0][1];
+          
+          //diagonals
+          s.correspondant.neighbors[0][1].neighbors[2][0] = s.correspondant.neighbors[1][0].neighbors[1][0];
+          s.correspondant.neighbors[1][0].neighbors[1][0].neighbors[0][2] = s.correspondant.neighbors[0][1]; 
+          s.correspondant.neighbors[0][2].neighbors[2][0] = s.correspondant.neighbors[1][0];
+          s.correspondant.neighbors[1][0].neighbors[0][2] = s.correspondant.neighbors[0][2];
+          
+        }
+        else if (s.cameFrom.correspondant.col > s.correspondant.col) { //if gooing diagonal right
+          s.correspondant.neighbors[0][1].neighbors[2][1] = s.correspondant.neighbors[1][2];
+          s.correspondant.neighbors[1][2].neighbors[0][1] = s.correspondant.neighbors[0][1];
+          
+          //diaganols
+          s.correspondant.neighbors[1][2].neighbors[0][0] = s.correspondant.neighbors[0][0];
+          s.correspondant.neighbors[0][0].neighbors[2][2] = s.correspondant.neighbors[1][2];
+          s.correspondant.neighbors[0][1].neighbors[2][2] = s.correspondant.neighbors[1][2].neighbors[1][2];
+          s.correspondant.neighbors[1][2].neighbors[1][2].neighbors[0][0] = s.correspondant.neighbors[0][1];
+        }
+        else {
+          s.correspondant.neighbors[0][0].neighbors[2][2] = s.correspondant.neighbors[1][2];
+          s.correspondant.neighbors[1][2].neighbors[0][0] = s.correspondant.neighbors[0][0];
+          s.correspondant.neighbors[0][2].neighbors[2][0] = s.correspondant.neighbors[1][0];
+          s.correspondant.neighbors[1][0].neighbors[0][2] = s.correspondant.neighbors[0][2];
+        }
+      }
+      if(s.correspondant.col == 0 || s.correspondant.col == this.bitmap.size() -1) {
+       //TODO
+      }
+      for(int c = s.correspondant.col+1; c < this.bitmap.size(); c++) {
+        this.bitmap.get(c-1).set(s.correspondant.row,
+            this.bitmap.get(c).get(s.correspondant.row));
+        this.bitmap.get(c-1).get(s.correspondant.row).col--;
+   
+      }
+      
+      
     }
+    this.bitmap.remove(this.bitmap.size()-1);
   }
 }

@@ -3,7 +3,7 @@ import tester.Tester;
 public class Examples {
   SeamCarver w;
   void initData() {
-    w = new SeamCarver("img2.jpg");
+    w = new SeamCarver("img1.jpg");
   }
   
   void testGame(Tester t) {
@@ -31,6 +31,21 @@ public class Examples {
     initData();
     t.checkInexact(w.bitmap.get(0).get(0).energy, 0, .01);
   }*/
+  
+  void testRemoveSeam(Tester t) {
+    initData();
+    w.removeSeam(w.findSeamVertical());
+    for(int c = 0; c < w.bitmap.size(); c++) {
+      t.checkExpect(w.bitmap.get(c).size(), 516);
+    }
+    
+    for(int c = 0; c < w.bitmap.size(); c++) {
+      for(int r = 0; r < w.bitmap.get(0).size(); r++) {
+        Pixel cur = w.bitmap.get(c).get(r);
+        
+      }
+    }
+  }
   
   
 }
